@@ -1,59 +1,76 @@
-import { Dialog, Transition } from "@headlessui/react";
-import { Button, IconPlus, IconX } from "@supabase/ui";
-import Image from "next/image";
-import add from "public/add.png";
-import { Fragment, useCallback, useState, VFC } from "react";
+import { Dialog, Disclosure, Transition } from "@headlessui/react";
+import { ChevronUpIcon } from "@heroicons/react/solid";
+import { Button, IconEdit, IconSave, IconTrash2, IconX } from "@supabase/ui";
+import { useRouter } from "next/router";
+import { Fragment, useCallback, useState } from "react";
+import { Title } from "src/components/titleList";
 import { client } from "src/libs/supabase";
 
-type props = {
-  uuid: string;
-  getTitleList: VoidFunction;
+type Props = {
+  title: Title;
+  getSubtitleList: VoidFunction;
 };
 
-export const AddTitle: VFC<props> = (props) => {
+export const EditTitle = (props: Props) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [title, setTitle] = useState<string>("");
-  const [author, setAuthor] = useState<string>("");
+  const [title, setTitle] = useState<string>(props.title.title);
+  const [author, setAuthor] = useState<string>(props.title.author);
+
+  const router = useRouter();
 
   const openModal = useCallback(() => {
     setIsOpen(true);
   }, []);
 
   const closeModal = useCallback(() => {
-    setTitle("");
-    setAuthor("");
     setIsOpen(false);
   }, []);
 
-  const handleAdd = useCallback(
-    async (uuid: string) => {
-      if (title == "") {
-        alert("Input title.");
-        return;
-      }
-      const { data, error } = await client
-        .from("manga_title")
-        .insert([{ user_id: uuid, title: title, author: author }]);
-      if (error) {
-        alert(error);
-      } else {
-        if (data) {
-          props.getTitleList();
-          closeModal();
-        }
-      }
-    },
-    [title, author, props, closeModal]
-  );
+  const handleSave = useCallback(async () => {
+    if (title == "") {
+      alert("Input title.");
+      return;
+    }
+    const { error } = await client.from("manga_title").upsert([
+      {
+        id: props.title.id,
+        user_id: props.title.user_id,
+        title: title,
+        author: author,
+        image_url: props.title.image_url,
+      },
+    ]);
+    if (error) {
+      alert(error);
+    } else {
+      props.getSubtitleList();
+      closeModal();
+    }
+  }, [title, props, author, closeModal]);
+
+  const handleRemove = useCallback(async () => {
+    let { error } = await client
+      .from("manga_subtitle")
+      .delete()
+      .eq("title_id", props.title.id);
+    if (error) {
+      alert(error);
+    }
+    ({ error } = await client
+      .from("manga_title")
+      .delete()
+      .eq("id", props.title.id));
+    if (error) {
+      alert(error);
+    }
+    router.push("/");
+  }, [props, router]);
 
   return (
     <>
-      <div className="p-2 border cursor-pointer" onClick={openModal}>
-        <div className="flex justify-center">
-          <Image src={add} alt="thumbnail" width={126} height={200} />
-        </div>
-        <div className="mt-2 text-center">ADD NEW</div>
-      </div>
+      <Button block size="medium" icon={<IconEdit />} onClick={openModal}>
+        EDIT
+      </Button>
 
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog
@@ -104,6 +121,32 @@ export const AddTitle: VFC<props> = (props) => {
                     }}
                   />
                 </div>
+                <div className="mx-4 mt-4 bg-blue-50">
+                  <Disclosure>
+                    {({ open }) => (
+                      <>
+                        <Disclosure.Button className="flex justify-between w-full px-4 py-2 text-sm font-medium text-left text-blue-500 bg-blue-100 rounded-lg hover:bg-blue-200 focus:outline-none focus-visible:ring focus-visible:ring-blue-500 focus-visible:ring-opacity-75">
+                          <span>REMOVE THIS</span>
+                          <ChevronUpIcon
+                            className={`${
+                              open ? "transform rotate-180" : ""
+                            } w-5 h-5 text-blue-500`}
+                          />
+                        </Disclosure.Button>
+                        <Disclosure.Panel className="p-4 text-gray-500 text-md">
+                          <Button
+                            block
+                            onClick={handleRemove}
+                            icon={<IconTrash2 />}
+                          >
+                            REMOVE
+                          </Button>
+                        </Disclosure.Panel>
+                      </>
+                    )}
+                  </Disclosure>
+                </div>
+
                 <div className="flex justify-center mt-4">
                   <div className="w-32 p-2">
                     <Button
@@ -120,10 +163,10 @@ export const AddTitle: VFC<props> = (props) => {
                     <Button
                       block
                       size="large"
-                      icon={<IconPlus />}
-                      onClick={() => handleAdd(props.uuid)}
+                      icon={<IconSave />}
+                      onClick={handleSave}
                     >
-                      Add
+                      Save
                     </Button>
                   </div>
                 </div>

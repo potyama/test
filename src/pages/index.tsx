@@ -1,8 +1,8 @@
 import { Auth, Button, IconLogOut } from "@supabase/ui";
 import React, { ReactNode, useCallback, useEffect, useState } from "react";
-import { LayoutWrapper } from "../components/layoutWrapper";
-import { Title, TitleList } from "../components/titleList";
-import { client } from "../libs/supabase";
+import { LayoutWrapper } from "src/components/layoutWrapper";
+import { Title, TitleList } from "src/components/titleList";
+import { client } from "src/libs/supabase";
 
 type Props = {
   children: ReactNode;
